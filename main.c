@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -40,7 +41,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-SPI_HandleTypeDef hspi1;
+SPI_HandleTypeDef SPI_Params;
 
 /* USER CODE BEGIN PV */
 
@@ -56,7 +57,9 @@ static void MX_SPI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 uint8_t spiTxBuf[2], spiRxBuf[2];
+
 /* USER CODE END 0 */
 
 /**
@@ -89,15 +92,33 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3,GPIO_PIN_RESET);
-  spiTxBuf[0] =0x20;
-  spiTxBuf[1] =0x11;
-  HAL_SPI_Transmit(&hspi1, spiTxBuf, 2, 50);
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3,GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3,GPIO_PIN_RESET); spiTxBuf[0] = 0x20 | 0x80;
-  HAL_SPI_Transmit(&hspi1, spiTxBuf, 1, 50);
-  HAL_SPI_Receive(&hspi1, spiRxBuf, 1, 50);
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3,GPIO_PIN_SET);
+
+          //1. Bring slave select low
+
+	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+
+	  //2. Transmit register + data
+
+	  SPI_HandleTypeDef SPI_Params;
+
+	  spiTxBuf[0] = 0x20;
+
+	  HAL_SPI_Init(&SPI_Params);
+	  HAL_SPI_Transmit(&SPI_Params, spiTxBuf, 2, 50);
+
+	  //3. Bring slave high
+
+	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
+
+
+	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+	  spiTxBuf[0] = 0x20;
+	  HAL_SPI_Transmit(&SPI_Params,&spiTxBuf[0], 1, 50);
+	  spiTxBuf[1] = 0x11;
+	  HAL_SPI_Transmit(&SPI_Params,&spiTxBuf[1], 1, 50);
+	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
+	
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -107,12 +128,26 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3,GPIO_PIN_SET);
-	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3,GPIO_PIN_RESET); spiTxBuf[0] = 0x29 | 0x80;
-	  HAL_SPI_Transmit(&hspi1, spiTxBuf, 1, 50);
-	  HAL_SPI_Receive(&hspi1, spiRxBuf, 1, 50);
-	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3,GPIO_PIN_SET);
-	  HAL_Delay(300);
+
+	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+
+
+	   spiTxBuf[1] = 0x11;
+	   HAL_SPI_Init(&SPI_Params);
+	   HAL_SPI_Transmit(&SPI_Params, spiTxBuf, 2, 50);
+
+
+	  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+	   spiTxBuf[0] = 0x20;
+	   HAL_SPI_Transmit(&SPI_Params,&spiTxBuf[0], 1, 50);
+	   spiTxBuf[1] = 0x11;
+	   HAL_SPI_Transmit(&SPI_Params,&spiTxBuf[1], 1, 50);
+	   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
+
+
+       HAL_Delay(300);
+
+	  
   }
   /* USER CODE END 3 */
 }
@@ -140,7 +175,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
   RCC_OscInitStruct.PLL.PLLN = 50;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -155,7 +190,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -171,25 +206,29 @@ static void MX_SPI1_Init(void)
 
   /* USER CODE BEGIN SPI1_Init 0 */
 
+
+
   /* USER CODE END SPI1_Init 0 */
 
   /* USER CODE BEGIN SPI1_Init 1 */
 
+
+
   /* USER CODE END SPI1_Init 1 */
   /* SPI1 parameter configuration*/
-  hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
-  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi1.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  SPI_Params.Instance = SPI1;
+  SPI_Params.Init.Mode = SPI_MODE_MASTER;
+  SPI_Params.Init.Direction = SPI_DIRECTION_2LINES;
+  SPI_Params.Init.DataSize = SPI_DATASIZE_8BIT;
+  SPI_Params.Init.CLKPolarity = SPI_POLARITY_LOW;
+  SPI_Params.Init.CLKPhase = SPI_PHASE_1EDGE;
+  SPI_Params.Init.NSS = SPI_NSS_SOFT;
+  SPI_Params.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
+  SPI_Params.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  SPI_Params.Init.TIMode = SPI_TIMODE_DISABLE;
+  SPI_Params.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  SPI_Params.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&SPI_Params) != HAL_OK)
   {
     Error_Handler();
   }
@@ -214,34 +253,30 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(CS_I2C_SPI_GPIO_Port, CS_I2C_SPI_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(Zelena_LED_GPIO_Port, Zelena_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : CS_I2C_SPI_Pin */
-  GPIO_InitStruct.Pin = CS_I2C_SPI_Pin;
+  /*Configure GPIO pin : PE3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(CS_I2C_SPI_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Zelena_LED_Pin */
-  GPIO_InitStruct.Pin = Zelena_LED_Pin;
+  /*Configure GPIO pin : LED_GREEN_Pin */
+  GPIO_InitStruct.Pin = LED_GREEN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(Zelena_LED_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_GREEN_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : INT1_DRDY_Pin */
-  GPIO_InitStruct.Pin = INT1_DRDY_Pin;
+  /*Configure GPIO pin : PE0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(INT1_DRDY_GPIO_Port, &GPIO_InitStruct);
-
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
 }
 
@@ -281,4 +316,4 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/Q	
