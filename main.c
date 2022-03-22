@@ -316,4 +316,4 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/Q	
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
